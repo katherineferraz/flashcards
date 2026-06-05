@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Flashcards</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f3;
+    --bg-tertiary: #eeede8;
+    --text-primary: #1a1a18;
+    --text-secondary: #6b6b67;
+    --border: rgba(0,0,0,0.12);
+    --border-md: rgba(0,0,0,0.22);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --green: #1D9E75;
+    --green-bg: #E1F5EE;
+    --green-text: #085041;
+    --red: #E24B4A;
+    --amber: #EF9F27;
+    --blue: #378ADD;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-primary: #1e1e1c;
+      --bg-secondary: #2a2a27;
+      --bg-tertiary: #333330;
+      --text-primary: #f0efea;
+      --text-secondary: #9a9a94;
+      --border: rgba(255,255,255,0.1);
+      --border-md: rgba(255,255,255,0.2);
+      --green-bg: #04342C;
+      --green-text: #9FE1CB;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg-tertiary); color: var(--text-primary); min-height: 100vh; }
+  .app { max-width: 430px; margin: 0 auto; background: var(--bg-tertiary); min-height: 100vh; position: relative; display: flex; flex-direction: column; }
+  .topbar { display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px; background: var(--bg-primary); border-bottom: 0.5px solid var(--border); }
+  .topbar-title { font-size: 15px; font-weight: 500; color: var(--text-primary); flex: 1; }
+  .icon-btn { background: none; border: 0.5px solid var(--border-md); border-radius: var(--radius-md); padding: 7px 10px; cursor: pointer; color: var(--text-secondary); font-size: 13px; display: flex; align-items: center; gap: 5px; }
+  .icon-btn:active { background: var(--bg-secondary); }
+  .content { flex: 1; padding: 0 16px 90px; overflow-y: auto; }
+  .bottom-nav { display: flex; border-top: 0.5px solid var(--border); background: var(--bg-primary); padding: 0; position: sticky; bottom: 0; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 0; cursor: pointer; font-size: 11px; color: var(--text-secondary); border: none; background: none; }
+  .nav-item.active { color: var(--green); }
+  .nav-item i { font-size: 22px; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .section-title { font-size: 12px; color: var(--text-secondary); font-weight: 500; margin: 16px 0 8px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .stats-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 14px 0; }
+  .stat { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 10px 12px; }
+  .stat-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 3px; }
+  .stat-value { font-size: 20px; font-weight: 500; color: var(--text-primary); }
+  .subj-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+  .subj-card { background: var(--bg-primary); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px 12px; cursor: pointer; }
+  .subj-card:active { background: var(--bg-secondary); }
+  .subj-name { font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 3px; margin-top: 8px; }
+  .subj-meta { font-size: 11px; color: var(--text-secondary); }
+  .badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 20px; font-weight: 500; margin-top: 5px; }
+  .badge-due { background: var(--green-bg); color: var(--green-text); }
+  .badge-zero { background: var(--bg-secondary); color: var(--text-secondary); }
+  .prog-bar { height: 4px; background: var(--bg-secondary); border-radius: 2px; margin: 0 0 14px; }
+  .prog-fill { height: 100%; background: var(--green); border-radius: 2px; transition: width .4s; }
+  .scene { perspective: 900px; width: 100%; height: 200px; margin-bottom: 12px; cursor: pointer; }
+  .card3d { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.45s cubic-bezier(.4,0,.2,1); }
+  .card3d.flipped { transform: rotateY(180deg); }
+  .face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: var(--radius-lg); border: 0.5px solid var(--border); background: var(--bg-primary); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.25rem; }
+  .face.back { transform: rotateY(180deg); background: var(--bg-secondary); }
+  .card-label { font-size: 10px; color: var(--text-secondary); position: absolute; top: 12px; left: 14px; letter-spacing: 0.06em; font-weight: 500; }
+  .card-subj { font-size: 10px; color: var(--text-secondary); position: absolute; top: 12px; right: 14px; }
+  .card-hint { font-size: 11px; color: var(--text-secondary); position: absolute; bottom: 12px; }
+  .card-q { font-size: 18px; font-weight: 500; color: var(--text-primary); text-align: center; line-height: 1.4; }
+  .card-a { font-size: 15px; color: var(--text-secondary); text-align: center; line-height: 1.5; }
+  .flip-btn { width: 100%; padding: 13px; border-radius: var(--radius-md); border: 0.5px solid var(--border-md); background: var(--bg-primary); cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text-primary); margin-bottom: 10px; }
+  .flip-btn:active { background: var(--bg-secondary); }
+  .rate-row { display: none; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+  .rate-row.visible { display: grid; }
+  .btn-rate { padding: 13px 6px; border-radius: var(--radius-md); border: 0.5px solid var(--border); background: var(--bg-primary); cursor: pointer; font-size: 13px; font-weight: 500; text-align: center; color: var(--text-primary); line-height: 1.3; }
+  .btn-rate:active { background: var(--bg-secondary); }
+  .btn-rate .iv { display: block; font-size: 10px; font-weight: 400; color: var(--text-secondary); margin-top: 2px; }
+  .btn-rate.again { border-color: var(--red); }
+  .btn-rate.hard { border-color: var(--amber); }
+  .btn-rate.good { border-color: var(--green); }
+  .btn-rate.easy { border-color: var(--blue); }
+  .done-state { text-align: center; padding: 2.5rem 1rem; }
+  .done-icon { font-size: 44px; color: var(--green); display: block; margin-bottom: 10px; }
+  .done-title { font-size: 15px; font-weight: 500; margin-bottom: 6px; }
+  .done-sub { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
+  .done-btn { padding: 11px 24px; border-radius: var(--radius-md); border: 0.5px solid var(--border-md); background: var(--bg-primary); cursor: pointer; font-size: 13px; color: var(--text-primary); }
+  .add-form { background: var(--bg-primary); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px; margin: 12px 0; display: none; }
+  .add-form.open { display: block; }
+  .add-form select, .add-form textarea, .add-form input[type=text] { width: 100%; margin-bottom: 8px; border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 10px 12px; font-size: 13px; font-family: inherit; color: var(--text-primary); background: var(--bg-secondary); outline: none; }
+  .add-form select:focus, .add-form textarea:focus, .add-form input:focus { border-color: var(--green); }
+  .add-form textarea { min-height: 64px; resize: vertical; }
+  .add-form-btns { display: flex; gap: 8px; }
+  .add-form-btns button { flex: 1; padding: 10px; border-radius: var(--radius-md); border: 0.5px solid var(--border-md); background: var(--bg-primary); cursor: pointer; font-size: 13px; color: var(--text-primary); }
+  .add-form-btns .primary { background: var(--green); border-color: var(--green); color: #fff; }
+  .browse-item { background: var(--bg-primary); border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+  .browse-item:active { background: var(--bg-secondary); }
+  .card-item { background: var(--bg-primary); border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 6px; display: flex; align-items: center; }
+  .card-item-q { font-size: 13px; color: var(--text-primary); }
+  .card-item-b { font-size: 11px; color: var(--text-secondary); }
+  .del-btn { background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 18px; padding: 4px 6px; margin-left: auto; flex-shrink: 0; }
+  .back-btn { background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 22px; padding: 0; display: flex; align-items: center; }
+  .subj-header { display: flex; align-items: center; gap: 10px; padding: 14px 0 8px; }
+  .subj-header-title { font-size: 15px; font-weight: 500; flex: 1; }
+  .study-btn-sm { padding: 7px 12px; border-radius: var(--radius-md); border: 0.5px solid var(--green); background: none; color: var(--green); cursor: pointer; font-size: 12px; font-weight: 500; }
+  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--text-primary); color: var(--bg-primary); font-size: 13px; padding: 9px 18px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="topbar-title" id="topTitle"><i class="ti ti-cards" style="margin-right:6px"></i>Flashcards</div>
+    <button class="icon-btn" onclick="openAdd()"><i class="ti ti-plus"></i></button>
+  </div>
+
+  <div style="padding:0 16px">
+    <div class="add-form" id="addForm">
+      <select id="newSubj" onchange="toggleCustomSubj()"></select>
+      <input type="text" id="newSubjCustom" placeholder="Nome da nova matéria..." style="display:none">
+      <textarea id="newFront" placeholder="Pergunta / frente"></textarea>
+      <textarea id="newBack" placeholder="Resposta / verso"></textarea>
+      <div class="add-form-btns">
+        <button class="primary" onclick="addCard()">Salvar</button>
+        <button onclick="closeAdd()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="view active" id="view-home">
+      <div class="stats-row">
+        <div class="stat"><div class="stat-label">Para revisar hoje</div><div class="stat-value" id="hDue" style="color:var(--green)">0</div></div>
+        <div class="stat"><div class="stat-label">Total de cards</div><div class="stat-value" id="hTotal">0</div></div>
+      </div>
+      <div class="section-title">Matérias</div>
+      <div class="subj-grid" id="subjGrid"></div>
+    </div>
+
+    <div class="view" id="view-study">
+      <div style="padding-top:14px">
+        <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+        <div class="stats-row" style="margin-top:0">
+          <div class="stat"><div class="stat-label">Restantes</div><div class="stat-value" id="sLeft">0</div></div>
+          <div class="stat"><div class="stat-label">Revisados</div><div class="stat-value" id="sDone" style="color:var(--green)">0</div></div>
+        </div>
+        <div id="studyArea">
+          <div class="scene" onclick="flipCard()">
+            <div class="card3d" id="card3d">
+              <div class="face front">
+                <span class="card-label" id="cardLabel">NOVO</span>
+                <span class="card-subj" id="cardSubj"></span>
+                <div class="card-q" id="cardQ">–</div>
+                <span class="card-hint">toque para revelar</span>
+              </div>
+              <div class="face back">
+                <span class="card-label">RESPOSTA</span>
+                <div class="card-a" id="cardA">–</div>
+              </div>
+            </div>
+          </div>
+          <button class="flip-btn" id="flipBtn" onclick="flipCard()">Revelar resposta</button>
+          <div class="rate-row" id="rateRow">
+            <button class="btn-rate again" onclick="rate(0)">Errei<span class="iv" id="i0"></span></button>
+            <button class="btn-rate hard" onclick="rate(1)">Difícil<span class="iv" id="i1"></span></button>
+            <button class="btn-rate good" onclick="rate(2)">Bom<span class="iv" id="i2"></span></button>
+            <button class="btn-rate easy" onclick="rate(3)">Fácil<span class="iv" id="i3"></span></button>
+          </div>
+        </div>
+        <div id="doneState" style="display:none" class="done-state">
+          <i class="ti ti-circle-check done-icon"></i>
+          <div class="done-title">Sessão concluída!</div>
+          <div class="done-sub">Todos os cards revisados por hoje.</div>
+          <button class="done-btn" onclick="goHome()">Voltar às matérias</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="view-browse">
+      <div id="browseList">
+        <div class="section-title">Gerenciar baralhos</div>
+        <div id="browseGrid"></div>
+      </div>
+      <div id="browseDetail" style="display:none"></div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-item active" id="nav-home" onclick="goTab('home')">
+      <i class="ti ti-home"></i>Início
+    </button>
+    <button class="nav-item" id="nav-study" onclick="startStudyAll()">
+      <i class="ti ti-brain"></i>Estudar
+    </button>
+    <button class="nav-item" id="nav-browse" onclick="goTab('browse')">
+      <i class="ti ti-folder"></i>Baralhos
+    </button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SUBJ_ICONS = {
+  'Matemática':'ti-math-function','Inglês':'ti-language','Capitais':'ti-world',
+  'História':'ti-book','Química':'ti-flask','Física':'ti-atom','Biologia':'ti-dna',
+  'Português':'ti-pencil','Meus Cards':'ti-cards'
+};
+const SUBJ_COLORS = {
+  'Matemática':'#185FA5','Inglês':'#993556','Capitais':'#0F6E56',
+  'História':'#854F0B','Química':'#A32D2D','Física':'#534AB7','Biologia':'#3B6D11',
+  'Português':'#D85A30','Meus Cards':'#5F5E5A'
+};
+function sIcon(s){return SUBJ_ICONS[s]||'ti-bookmark'}
+function sColor(s){return SUBJ_COLORS[s]||'#888780'}
+
+const DEFAULT = {
+  "Matemática":[
+    {f:"O que é número primo?",b:"Divisível apenas por 1 e por si mesmo"},
+    {f:"Fórmula da área do círculo",b:"A = π × r²"},
+    {f:"Teorema de Pitágoras",b:"a² + b² = c²"},
+    {f:"O que é derivada?",b:"Taxa de variação instantânea de uma função"}
+  ],
+  "Inglês":[
+    {f:"To achieve",b:"Alcançar / Conquistar"},
+    {f:"Ubiquitous",b:"Onipresente, que está em todo lugar"},
+    {f:"Resilience",b:"Resiliência, capacidade de recuperação"},
+    {f:"Threshold",b:"Limiar / Soleira / Ponto de partida"}
+  ],
+  "Capitais":[
+    {f:"Capital do Brasil",b:"Brasília"},
+    {f:"Capital da França",b:"Paris"},
+    {f:"Capital do Japão",b:"Tóquio"},
+    {f:"Capital da Austrália",b:"Camberra"}
+  ]
+};
+
+function loadData(){
+  try{
+    const d=localStorage.getItem('fc_cards');
+    return d?JSON.parse(d):null;
+  }catch(e){return null}
+}
+function saveData(){
+  try{localStorage.setItem('fc_cards',JSON.stringify(cards));}catch(e){}
+}
+
+let cards=[];
+let queue=[];
+let current=null;
+let flipped=false;
+let sessionDone=0;
+let totalSession=0;
+let currentFilter=null;
+
+function initCards(){
+  const saved=loadData();
+  if(saved&&saved.length){cards=saved;return;}
+  cards=[];
+  for(const[deck,items] of Object.entries(DEFAULT)){
+    for(const it of items){
+      cards.push({f:it.f,b:it.b,deck,ease:2.5,interval:0,reps:0,due:Date.now(),state:'new'});
+    }
+  }
+  saveData();
+}
+
+function sm2(card,q){
+  let{ease,interval,reps}=card;
+  if(q<2){reps=0;interval=1;}
+  else{
+    if(reps===0)interval=1;
+    else if(reps===1)interval=6;
+    else interval=Math.round(interval*ease);
+    reps++;
+    ease=Math.max(1.3,ease+0.1-(3-q)*(0.08+(3-q)*0.02));
+  }
+  card.ease=ease;card.interval=interval;card.reps=reps;
+  card.due=Date.now()+interval*864e5;
+  card.state=reps===0?'new':reps<3?'learning':'review';
+  return card;
+}
+
+function ivLabel(c,q){
+  const f={...c};sm2(f,q);
+  if(f.interval<1)return '<1d';
+  if(f.interval===1)return '1 dia';
+  return f.interval+' dias';
+}
+
+function dueCards(subj){
+  const now=Date.now();
+  return cards.filter(c=>c.due<=now&&(!subj||c.deck===subj));
+}
+
+function decks(){return [...new Set(cards.map(c=>c.deck))];}
+
+function renderHome(){
+  const now=Date.now();
+  document.getElementById('hDue').textContent=cards.filter(c=>c.due<=now).length;
+  document.getElementById('hTotal').textContent=cards.length;
+  const grid=document.getElementById('subjGrid');
+  grid.innerHTML=decks().map(s=>{
+    const total=cards.filter(c=>c.deck===s).length;
+    const d=dueCards(s).length;
+    const col=sColor(s);
+    return `<div class="subj-card" onclick="startStudy('${s}')">
+      <i class="ti ${sIcon(s)}" style="font-size:24px;color:${col};display:block"></i>
+      <div class="subj-name">${s}</div>
+      <div class="subj-meta">${total} cards</div>
+      <span class="badge ${d>0?'badge-due':'badge-zero'}">${d>0?d+' p/ revisar':'Em dia'}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderBrowse(){
+  document.getElementById('browseDetail').style.display='none';
+  document.getElementById('browseList').style.display='block';
+  document.getElementById('browseGrid').innerHTML=decks().map(s=>{
+    const total=cards.filter(c=>c.deck===s).length;
+    const col=sColor(s);
+    return `<div class="browse-item" onclick="showDetail('${s}')">
+      <i class="ti ${sIcon(s)}" style="font-size:22px;color:${col}"></i>
+      <div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--text-primary)">${s}</div><div style="font-size:11px;color:var(--text-secondary)">${total} cards</div></div>
+      <i class="ti ti-chevron-right" style="color:var(--text-secondary)"></i>
+    </div>`;
+  }).join('');
+}
+
+function showDetail(s){
+  const detail=document.getElementById('browseDetail');
+  const stM={new:'Novo',learning:'Aprendendo',review:'Revisão'};
+  const subjCards=cards.filter(c=>c.deck===s);
+  detail.innerHTML=`
+    <div class="subj-header">
+      <button class="back-btn" onclick="renderBrowse()"><i class="ti ti-arrow-left"></i></button>
+      <div class="subj-header-title">${s}</div>
+      <button class="study-btn-sm" onclick="startStudy('${s}')">Estudar</button>
+    </div>
+    ${subjCards.map(c=>`
+      <div class="card-item">
+        <div style="flex:1">
+          <div class="card-item-q">${c.f}</div>
+          <div class="card-item-b">${c.b} · ${stM[c.state]||'Novo'}</div>
+        </div>
+        <button class="del-btn" onclick="deleteCard(${cards.indexOf(c)})"><i class="ti ti-trash"></i></button>
+      </div>`).join('')}`;
+  document.getElementById('browseList').style.display='none';
+  detail.style.display='block';
+}
+
+function deleteCard(idx){
+  const deck=cards[idx].deck;
+  cards.splice(idx,1);
+  saveData();
+  showToast('Card removido');
+  showDetail(deck);
+  renderHome();
+}
+
+function startStudy(subj){
+  currentFilter=subj;
+  buildQueue(subj);
+  goTab('study');
+  document.getElementById('topTitle').innerHTML=`<i class="ti ti-cards" style="margin-right:6px"></i>${subj}`;
+}
+
+function startStudyAll(){
+  currentFilter=null;
+  buildQueue(null);
+  goTab('study');
+  document.getElementById('topTitle').innerHTML=`<i class="ti ti-cards" style="margin-right:6px"></i>Todos os cards`;
+}
+
+function buildQueue(subj){
+  queue=dueCards(subj).slice();
+  sessionDone=0;totalSession=queue.length;
+  updateStudyStats();showNext();
+}
+
+function updateStudyStats(){
+  document.getElementById('sLeft').textContent=queue.length;
+  document.getElementById('sDone').textContent=sessionDone;
+  const pct=totalSession>0?Math.round(sessionDone/totalSession*100):0;
+  document.getElementById('progFill').style.width=pct+'%';
+}
+
+function showNext(){
+  if(queue.length===0){
+    document.getElementById('studyArea').style.display='none';
+    document.getElementById('doneState').style.display='block';
+    return;
+  }
+  document.getElementById('studyArea').style.display='block';
+  document.getElementById('doneState').style.display='none';
+  current=queue[0];flipped=false;
+  document.getElementById('card3d').classList.remove('flipped');
+  document.getElementById('cardQ').textContent=current.f;
+  document.getElementById('cardA').textContent=current.b;
+  document.getElementById('cardSubj').textContent=current.deck;
+  const sl={new:'NOVO',learning:'APRENDENDO',review:'REVISÃO'};
+  document.getElementById('cardLabel').textContent=sl[current.state]||'NOVO';
+  document.getElementById('flipBtn').style.display='block';
+  document.getElementById('rateRow').classList.remove('visible');
+  for(let i=0;i<4;i++)document.getElementById('i'+i).textContent=ivLabel(current,i);
+}
+
+function flipCard(){
+  if(!current)return;
+  flipped=!flipped;
+  document.getElementById('card3d').classList.toggle('flipped',flipped);
+  if(flipped){
+    document.getElementById('flipBtn').style.display='none';
+    document.getElementById('rateRow').classList.add('visible');
+  }
+}
+
+function rate(q){
+  if(!current)return;
+  sm2(current,q);
+  queue.shift();
+  if(q<2)queue.push(current);
+  else sessionDone++;
+  saveData();
+  updateStudyStats();
+  renderHome();
+  showNext();
+}
+
+function goHome(){
+  currentFilter=null;
+  document.getElementById('topTitle').innerHTML=`<i class="ti ti-cards" style="margin-right:6px"></i>Flashcards`;
+  goTab('home');
+}
+
+function goTab(t){
+  ['home','study','browse'].forEach(v=>{
+    document.getElementById('view-'+v).classList.toggle('active',v===t);
+    const n=document.getElementById('nav-'+v);
+    if(n)n.classList.toggle('active',v===t);
+  });
+  if(t==='home')renderHome();
+  if(t==='browse')renderBrowse();
+}
+
+function openAdd(){
+  const sel=document.getElementById('newSubj');
+  sel.innerHTML=decks().map(s=>`<option>${s}</option>`).join('')+'<option value="__new__">+ Nova matéria...</option>';
+  document.getElementById('addForm').classList.add('open');
+}
+
+function closeAdd(){
+  document.getElementById('addForm').classList.remove('open');
+  document.getElementById('newSubjCustom').style.display='none';
+  document.getElementById('newFront').value='';
+  document.getElementById('newBack').value='';
+}
+
+function toggleCustomSubj(){
+  const sel=document.getElementById('newSubj');
+  document.getElementById('newSubjCustom').style.display=sel.value==='__new__'?'block':'none';
+}
+
+function addCard(){
+  const f=document.getElementById('newFront').value.trim();
+  const b=document.getElementById('newBack').value.trim();
+  let s=document.getElementById('newSubj').value;
+  if(s==='__new__')s=document.getElementById('newSubjCustom').value.trim();
+  if(!f||!b||!s){showToast('Preencha todos os campos');return;}
+  cards.push({f,b,deck:s,ease:2.5,interval:0,reps:0,due:Date.now(),state:'new'});
+  saveData();
+  closeAdd();
+  renderHome();
+  showToast('Card adicionado!');
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+initCards();
+renderHome();
+</script>
+</body>
+</html>
